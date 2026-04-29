@@ -1,1 +1,1 @@
-# devotional-generator
+# index.html
