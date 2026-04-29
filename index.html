@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     background: #1a1a1a;
     font-family: 'Montserrat', sans-serif;
@@ -18,7 +17,6 @@
     flex-direction: column;
     align-items: center;
   }
-
   h1 {
     font-size: 11px;
     font-weight: 700;
@@ -27,7 +25,6 @@
     color: #555;
     margin-bottom: 20px;
   }
-
   .controls {
     width: 100%;
     max-width: 390px;
@@ -36,89 +33,46 @@
     gap: 12px;
     margin-bottom: 24px;
   }
-
   .tab-row { display: flex; gap: 8px; }
-
   .tab {
-    flex: 1;
-    padding: 10px;
-    background: #222;
-    border: 1px solid #333;
-    border-radius: 8px;
-    color: #666;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s;
+    flex: 1; padding: 10px;
+    background: #222; border: 1px solid #333; border-radius: 8px;
+    color: #666; font-family: 'Montserrat', sans-serif; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s;
   }
   .tab.active { background: #fff; color: #000; border-color: #fff; }
-
   textarea {
-    width: 100%;
-    background: #111;
-    border: 1px solid #2a2a2a;
-    border-radius: 8px;
-    color: #fff;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 12px 14px;
-    resize: vertical;
-    min-height: 110px;
-    letter-spacing: 0.02em;
-    line-height: 1.5;
+    width: 100%; background: #111; border: 1px solid #2a2a2a; border-radius: 8px;
+    color: #fff; font-family: 'Montserrat', sans-serif; font-size: 13px;
+    font-weight: 700; text-transform: uppercase; padding: 12px 14px;
+    resize: vertical; min-height: 110px; letter-spacing: 0.02em; line-height: 1.5;
   }
   textarea::placeholder { color: #333; }
   textarea:focus { outline: none; border-color: #444; }
-
   .ref-input { min-height: unset !important; height: 44px; resize: none; }
-
   button.generate {
-    width: 100%;
-    padding: 13px;
-    background: #fff;
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: opacity 0.15s;
+    width: 100%; padding: 13px; background: #fff; color: #000; border: none;
+    border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    cursor: pointer; transition: opacity 0.15s;
   }
   button.generate:hover { opacity: 0.85; }
-
-  .canvas-wrap {
-    width: 100%;
-    max-width: 390px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
+  .preview-outer {
+    width: 100%; max-width: 390px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
   }
-
+  /* The canvas IS the preview */
   #noteCanvas {
-    width: 100%;
-    max-width: 390px;
-    height: auto;
+    width: 390px;
+    height: 844px;
     display: block;
-    touch-action: manipulation;
   }
-
   .hint {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #444;
-    text-align: center;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #444; text-align: center;
   }
+  #renderCanvas { display: none; }
 </style>
 </head>
 <body>
@@ -132,21 +86,24 @@
   </div>
   <textarea id="mainText" placeholder="ENTER TEXT HERE..." rows="6"></textarea>
   <textarea id="refText" class="ref-input" placeholder="PSALM 3:3-4 ESV" rows="1"></textarea>
-  <button class="generate" onclick="drawCanvas()">Generate</button>
+  <button class="generate" onclick="drawAll()">Generate</button>
 </div>
 
-<div class="canvas-wrap">
-  <canvas id="noteCanvas"></canvas>
-  <p class="hint" id="hint" style="display:none;">Hold down on image to save · On desktop: right-click → Save</p>
+<div class="preview-outer">
+  <!-- Preview canvas (scaled down for display) -->
+  <canvas id="noteCanvas" width="1170" height="2532"></canvas>
+  <p class="hint" id="hint" style="display:none;">iPhone: hold down image → Save to Photos &nbsp;|&nbsp; Desktop: right-click → Save</p>
 </div>
+
+<!-- Hidden high-res canvas not needed - we draw directly to the display canvas at full res and CSS scales it -->
 
 <script>
   let currentMode = 'scripture';
 
-  // Canvas dimensions — iPhone proportions
+  // Full resolution: 390*3 x 844*3
   const CW = 1170;
   const CH = 2532;
-  const S = 3; // scale factor (390 * 3 = 1170)
+  const S = 3;
 
   function setMode(mode) {
     currentMode = mode;
@@ -171,127 +128,188 @@
     return lines;
   }
 
-  function roundRect(ctx, x, y, w, h, r) {
+  function rrect(ctx, x, y, w, h, r) {
     ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
     ctx.closePath();
   }
 
-  function drawCanvas() {
+  function drawAll() {
     const text = document.getElementById('mainText').value.trim();
-    const ref = document.getElementById('refText').value.trim();
+    const ref  = document.getElementById('refText').value.trim();
     if (!text) return;
 
     document.fonts.ready.then(() => {
       const canvas = document.getElementById('noteCanvas');
-      canvas.width = CW;
-      canvas.height = CH;
       const ctx = canvas.getContext('2d');
 
-      // Background
+      // ── BACKGROUND ──
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, CW, CH);
 
       // ── NAV BAR ──
       // Back chevron
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2.2 * S;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(30 * S, 40 * S);
-      ctx.lineTo(22 * S, 48 * S);
-      ctx.lineTo(30 * S, 56 * S);
+      ctx.moveTo(30*S, 40*S);
+      ctx.lineTo(22*S, 48*S);
+      ctx.lineTo(30*S, 56*S);
       ctx.stroke();
 
-      // "Notes" text
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `700 ${17 * S}px Montserrat, sans-serif`;
+      // "Notes"
+      ctx.fillStyle = '#fff';
+      ctx.font = `700 ${17*S}px Montserrat, sans-serif`;
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'left';
-      ctx.fillText('Notes', 37 * S, 48 * S);
+      ctx.fillText('Notes', 37*S, 48*S);
 
-      // Plus-in-rect icon (top right)
-      ctx.strokeStyle = '#ffffff';
+      // Plus-rect icon
+      ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1.6 * S;
-      const rix = 330 * S, riy = 38 * S, rsz = 20 * S;
-      roundRect(ctx, rix, riy, rsz, rsz, 2 * S);
+      const rx=330*S, ry=38*S, rs=20*S;
+      rrect(ctx, rx, ry, rs, rs, 2*S);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(rix + rsz/2, riy + 4 * S);
-      ctx.lineTo(rix + rsz/2, riy + rsz - 4 * S);
-      ctx.moveTo(rix + 4 * S, riy + rsz/2);
-      ctx.lineTo(rix + rsz - 4 * S, riy + rsz/2);
+      ctx.moveTo(rx+rs/2, ry+4*S); ctx.lineTo(rx+rs/2, ry+rs-4*S);
+      ctx.moveTo(rx+4*S, ry+rs/2); ctx.lineTo(rx+rs-4*S, ry+rs/2);
       ctx.stroke();
 
-      // Three dots icon
-      ctx.fillStyle = '#ffffff';
-      const dx = 364 * S, dy = 48 * S;
-      [-8, 0, 8].forEach(offset => {
+      // Three dots
+      ctx.fillStyle = '#fff';
+      [-8,0,8].forEach(o => {
         ctx.beginPath();
-        ctx.arc(dx, dy + offset * S, 2 * S, 0, Math.PI * 2);
+        ctx.arc(364*S, 48*S + o*S, 2*S, 0, Math.PI*2);
         ctx.fill();
       });
 
-      // ── CONTENT ──
-      const upperText = text.toUpperCase();
+      // ── MAIN CONTENT ──
+      const upper = text.toUpperCase();
       const upperRef = ref ? ref.toUpperCase() : '';
+      const mx = 52*S;
+      const mw = CW - mx*2;
+      const ctop = 80*S;
+      const cbot = CH - 83*S; // leave space for bottom bar
+      const ch = cbot - ctop;
 
-      const marginX = 52 * S;
-      const maxWidth = CW - marginX * 2;
-      const contentTop = 80 * S;
-      const contentBottom = CH - 60 * S;
-      const contentH = contentBottom - contentTop;
+      const fsz = currentMode === 'scripture' ? 25*S : 19*S;
+      const lh  = fsz * (currentMode === 'scripture' ? 1.35 : 1.34);
+      const rfsz = 17*S;
 
-      const fontSize = currentMode === 'scripture' ? 25 * S : 19 * S;
-      const lineH = fontSize * (currentMode === 'scripture' ? 1.35 : 1.34);
-      const refFontSize = 17 * S;
-      const refLineH = refFontSize * 1.4;
-
-      ctx.font = `700 ${fontSize}px Montserrat, sans-serif`;
-      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 ${fsz}px Montserrat, sans-serif`;
+      ctx.fillStyle = '#fff';
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
 
-      const lines = wrapText(ctx, upperText, maxWidth);
-      const totalTextH = lines.length * lineH;
-      const refBlockH = upperRef ? (12 * S + refLineH) : 0;
-      const totalH = totalTextH + refBlockH;
+      const lines = wrapText(ctx, upper, mw);
+      const textH = lines.length * lh;
+      const refH = upperRef ? (12*S + rfsz*1.4) : 0;
+      const totalH = textH + refH;
 
-      let startY;
-      if (currentMode === 'scripture') {
-        startY = contentTop + (contentH - totalH) / 2;
-      } else {
-        startY = contentTop + 16 * S;
-      }
+      let sy = currentMode === 'scripture'
+        ? ctop + (ch - totalH) / 2
+        : ctop + 16*S;
 
-      lines.forEach((line, i) => {
-        ctx.fillText(line, marginX, startY + i * lineH);
-      });
+      lines.forEach((line, i) => ctx.fillText(line, mx, sy + i*lh));
 
       if (upperRef) {
-        ctx.font = `700 ${refFontSize}px Montserrat, sans-serif`;
-        ctx.fillText(upperRef, marginX, startY + totalTextH + 12 * S);
+        ctx.font = `700 ${rfsz}px Montserrat, sans-serif`;
+        ctx.fillText(upperRef, mx, sy + textH + 12*S);
       }
 
-      // Show hint
+      // ── BOTTOM BAR ──
+      const by = CH - 83*S;
+
+      // Separator line
+      ctx.strokeStyle = '#1c1c1c';
+      ctx.lineWidth = 1*S;
+      ctx.beginPath();
+      ctx.moveTo(0, by); ctx.lineTo(CW, by);
+      ctx.stroke();
+
+      // Icon positions spread across width
+      const iconY = by + 14*S;
+      const iconPositions = [48*S, 145*S, 245*S, 342*S];
+
+      ctx.strokeStyle = '#fff';
+      ctx.fillStyle = '#fff';
+      ctx.lineWidth = 1.4*S;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Icon 1: List/checklist
+      const [i1x, i1y] = [iconPositions[0]-12*S, iconY];
+      rrect(ctx, i1x, i1y, 5*S, 5*S, 1*S); ctx.stroke();
+      rrect(ctx, i1x, i1y+7.5*S, 5*S, 5*S, 1*S); ctx.stroke();
+      rrect(ctx, i1x, i1y+15*S, 5*S, 4*S, 1*S); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(i1x+7*S, i1y+2.5*S); ctx.lineTo(i1x+22*S, i1y+2.5*S);
+      ctx.moveTo(i1x+7*S, i1y+10*S);  ctx.lineTo(i1x+22*S, i1y+10*S);
+      ctx.moveTo(i1x+7*S, i1y+17*S);  ctx.lineTo(i1x+17*S, i1y+17*S);
+      ctx.stroke();
+
+      // Icon 2: Camera
+      const [i2x, i2y] = [iconPositions[1]-12*S, iconY];
+      rrect(ctx, i2x, i2y+4*S, 24*S, 15*S, 2.5*S); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(i2x+12*S, i2y+11.5*S, 4*S, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(i2x+8*S, i2y+4*S);
+      ctx.lineTo(i2x+8*S, i2y+2.5*S);
+      ctx.quadraticCurveTo(i2x+8*S, i2y+1*S, i2x+9.5*S, i2y+1*S);
+      ctx.lineTo(i2x+14.5*S, i2y+1*S);
+      ctx.quadraticCurveTo(i2x+16*S, i2y+1*S, i2x+16*S, i2y+2.5*S);
+      ctx.lineTo(i2x+16*S, i2y+4*S);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(i2x+19.5*S, i2y+7.5*S, 1.2*S, 0, Math.PI*2); ctx.fill();
+
+      // Icon 3: Pencil
+      const [i3x, i3y] = [iconPositions[2]-10*S, iconY];
+      ctx.beginPath();
+      ctx.moveTo(i3x+13*S, i3y+2*S);
+      ctx.lineTo(i3x+18*S, i3y+7*S);
+      ctx.lineTo(i3x+7*S,  i3y+18*S);
+      ctx.lineTo(i3x+2*S,  i3y+18*S);
+      ctx.lineTo(i3x+2*S,  i3y+13*S);
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(i3x+10*S, i3y+5*S); ctx.lineTo(i3x+15*S, i3y+10*S);
+      ctx.stroke();
+
+      // Icon 4: New note (pencil + line)
+      const [i4x, i4y] = [iconPositions[3]-10*S, iconY];
+      ctx.beginPath();
+      ctx.moveTo(i4x+3*S,  i4y+17*S);
+      ctx.lineTo(i4x+3*S,  i4y+13*S);
+      ctx.lineTo(i4x+13*S, i4y+3*S);
+      ctx.lineTo(i4x+17*S, i4y+7*S);
+      ctx.lineTo(i4x+7*S,  i4y+17*S);
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(i4x+13*S, i4y+3*S); ctx.lineTo(i4x+17*S, i4y+7*S);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(i4x+1*S, i4y+19*S); ctx.lineTo(i4x+19*S, i4y+19*S);
+      ctx.stroke();
+
       document.getElementById('hint').style.display = 'block';
     });
   }
 
-  // Auto-load sample on start
   window.onload = () => {
     document.getElementById('mainText').value = '"BUT YOU, O LORD, ARE A SHIELD ABOUT ME, MY GLORY, AND THE LIFTER OF MY HEAD. I CRIED ALOUD TO THE LORD, AND HE ANSWERED ME FROM HIS HOLY HILL. SELAH"';
     document.getElementById('refText').value = 'PSALM 3:3-4 ESV';
-    drawCanvas();
+    drawAll();
   };
 </script>
 </body>
