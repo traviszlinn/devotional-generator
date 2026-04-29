@@ -433,7 +433,7 @@
       const refFontSize = 17 * S;
       const refH = ref ? refFontSize * 1.4 + 12 * S : 0;
       const contentTop = 72 * S;
-      const contentBottom = H - 83 * S;
+      const contentBottom = H - 40 * S;
       const contentH = contentBottom - contentTop;
 
       let startY;
@@ -451,14 +451,6 @@
         ctx.font = `700 ${refFontSize}px Montserrat, sans-serif`;
         ctx.fillText(ref, marginX, startY + lines.length * lineH + 12 * S);
       }
-
-      // Bottom separator
-      ctx.strokeStyle = '#1c1c1c';
-      ctx.lineWidth = 1 * S;
-      ctx.beginPath();
-      ctx.moveTo(0, H - 83 * S);
-      ctx.lineTo(W, H - 83 * S);
-      ctx.stroke();
 
       // Export
       canvas.toBlob(blob => {
