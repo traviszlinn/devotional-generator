@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devotional Image Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a1a;
+    font-family: 'Montserrat', sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  h1 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .controls {
+    max-width: 390px;
+    margin: 0 auto 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tab-row { display: flex; gap: 8px; }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #777;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab.active { background: #fff; color: #000; border-color: #fff; }
+
+  textarea {
+    width: 100%;
+    background: #111;
+    border: 1px solid #2e2e2e;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 110px;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+  textarea::placeholder { color: #3a3a3a; }
+  textarea:focus { outline: none; border-color: #444; }
+
+  .ref-input { min-height: unset !important; height: 44px; resize: none; }
+
+  button.generate {
+    width: 100%;
+    padding: 13px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  button.generate:hover { opacity: 0.85; }
+
+  .preview-wrap {
+    max-width: 390px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  #notePreview {
+    width: 390px;
+    height: 844px;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .nav-bar {
+    position: absolute;
+    top: 14px;
+    left: 0;
+    right: 0;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+  }
+
+  .nav-back {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .nav-icons { display: flex; gap: 16px; align-items: center; }
+
+  .note-content {
+    position: absolute;
+    top: 72px;
+    left: 0;
+    right: 0;
+    bottom: 83px;
+    padding: 0 48px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .note-content.scripture-mode {
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .note-content.notes-mode {
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding-top: 10px;
+  }
+
+  .note-text {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    word-break: break-word;
+  }
+
+  .note-text.scripture-mode {
+    font-size: 25px;
+    line-height: 1.32;
+    letter-spacing: 0.01em;
+  }
+
+  .note-text.notes-mode {
+    font-size: 19px;
+    line-height: 1.33;
+    letter-spacing: 0.01em;
+  }
+
+  .scripture-ref {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 17px;
+    margin-top: 12px;
+    letter-spacing: 0.01em;
+  }
+
+  .bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 83px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-around;
+    padding-top: 14px;
+    border-top: 1px solid #1c1c1c;
+  }
+
+  button.download {
+    width: 100%;
+    padding: 13px;
+    background: transparent;
+    color: #fff;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  button.download:hover { border-color: #fff; }
+  button.download:disabled { opacity: 0.4; cursor: default; }
+
+  #renderCanvas { display: none; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Devotional Image Generator</h1>
+
+<div class="controls">
+  <div class="tab-row">
+    <button class="tab active" id="tab-scripture" onclick="setMode('scripture')">Scripture</button>
+    <button class="tab" id="tab-notes" onclick="setMode('notes')">Notes</button>
+  </div>
+  <textarea id="mainText" placeholder="ENTER TEXT HERE..." rows="6"></textarea>
+  <textarea id="refText" class="ref-input" placeholder="PSALM 3:3-4 ESV" rows="1"></textarea>
+  <button class="generate" onclick="renderNote()">Generate</button>
+</div>
+
+<div class="preview-wrap">
+  <div id="notePreview">
+    <div class="nav-bar">
+      <div class="nav-back">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+          <path d="M8 1.5L1.5 8L8 14.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Notes</span>
+      </div>
+      <div class="nav-icons">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="2" width="16" height="16" rx="2" stroke="white" stroke-width="1.6"/>
+          <path d="M10 6V14M6 10H14" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="1.5" fill="white"/>
+          <circle cx="10" cy="5" r="1.5" fill="white"/>
+          <circle cx="10" cy="15" r="1.5" fill="white"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="note-content scripture-mode" id="noteContent">
+      <div class="note-text scripture-mode" id="noteText">ENTER YOUR TEXT AND HIT GENERATE</div>
+      <div class="scripture-ref" id="noteRef" style="display:none;"></div>
+    </div>
+
+    <div class="bottom-bar">
+      <svg width="24" height="20" viewBox="0 0 24 20" fill="none">
+        <rect x="0.5" y="0.5" width="5" height="5" rx="1" stroke="white" stroke-width="1.4"/>
+        <rect x="0.5" y="8" width="5" height="5" rx="1" stroke="white" stroke-width="1.4"/>
+        <rect x="0.5" y="15.5" width="5" height="4" rx="1" stroke="white" stroke-width="1.4"/>
+        <line x1="8.5" y1="3" x2="23.5" y2="3" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="8.5" y1="10.5" x2="23.5" y2="10.5" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="8.5" y1="17.5" x2="18" y2="17.5" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg width="24" height="20" viewBox="0 0 24 20" fill="none">
+        <rect x="1" y="4" width="22" height="15" rx="2.5" stroke="white" stroke-width="1.4"/>
+        <circle cx="12" cy="12" r="4" stroke="white" stroke-width="1.4"/>
+        <path d="M8.5 4V2.5C8.5 1.7 9.2 1 10 1H14C14.8 1 15.5 1.7 15.5 2.5V4" stroke="white" stroke-width="1.4"/>
+        <circle cx="19.5" cy="7.5" r="1" fill="white"/>
+      </svg>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M13 2L18 7L7 18H2V13L13 2Z" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+        <line x1="10" y1="5" x2="15" y2="10" stroke="white" stroke-width="1.4"/>
+      </svg>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M3 17V13L13 3L17 7L7 17H3Z" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+        <line x1="13" y1="3" x2="17" y2="7" stroke="white" stroke-width="1.4"/>
+        <line x1="1" y1="19" x2="19" y2="19" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <button class="download" id="downloadBtn" onclick="downloadImage()">↓ Save Image</button>
+</div>
+
+<canvas id="renderCanvas"></canvas>
+
+<script>
+  let currentMode = 'scripture';
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('tab-scripture').classList.toggle('active', mode === 'scripture');
+    document.getElementById('tab-notes').classList.toggle('active', mode === 'notes');
+  }
+
+  function renderNote() {
+    const text = document.getElementById('mainText').value.trim();
+    const ref = document.getElementById('refText').value.trim();
+    if (!text) return;
+
+    const content = document.getElementById('noteContent');
+    const noteText = document.getElementById('noteText');
+    const noteRef = document.getElementById('noteRef');
+
+    noteText.textContent = text.toUpperCase();
+    content.className = 'note-content ' + currentMode + '-mode';
+    noteText.className = 'note-text ' + currentMode + '-mode';
+
+    if (ref) {
+      noteRef.textContent = ref.toUpperCase();
+      noteRef.style.display = 'block';
+    } else {
+      noteRef.style.display = 'none';
+    }
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const test = current ? current + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function downloadImage() {
+    const btn = document.getElementById('downloadBtn');
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+
+    document.fonts.ready.then(() => {
+      const S = 3;
+      const W = 390 * S;
+      const H = 844 * S;
+
+      const canvas = document.getElementById('renderCanvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, W, H);
+
+      // Nav — back chevron
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2 * S;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(30 * S, 36 * S);
+      ctx.lineTo(22 * S, 44 * S);
+      ctx.lineTo(30 * S, 52 * S);
+      ctx.stroke();
+
+      // Nav — "Notes"
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 ${17 * S}px Montserrat, sans-serif`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Notes', 36 * S, 44 * S);
+
+      // Nav icons — plus rect
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.6 * S;
+      const rix = 330 * S, riy = 34 * S;
+      roundRect(ctx, rix, riy, 20 * S, 20 * S, 2 * S);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rix + 10 * S, riy + 4 * S);
+      ctx.lineTo(rix + 10 * S, riy + 16 * S);
+      ctx.moveTo(rix + 4 * S, riy + 10 * S);
+      ctx.lineTo(rix + 16 * S, riy + 10 * S);
+      ctx.stroke();
+
+      // Nav icons — three dots
+      ctx.fillStyle = '#ffffff';
+      const dx = 362 * S, dy = 44 * S;
+      [-9, 0, 9].forEach(offset => {
+        ctx.beginPath();
+        ctx.arc(dx, dy + offset * S, 1.5 * S, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Content
+      const text = document.getElementById('noteText').textContent;
+      const refEl = document.getElementById('noteRef');
+      const ref = refEl.style.display !== 'none' ? refEl.textContent : '';
+
+      const marginX = 48 * S;
+      const maxWidth = W - marginX * 2;
+
+      const fontSize = currentMode === 'scripture' ? 25 * S : 19 * S;
+      const lineH = fontSize * (currentMode === 'scripture' ? 1.32 : 1.33);
+
+      ctx.font = `700 ${fontSize}px Montserrat, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textBaseline = 'top';
+
+      const lines = wrapText(ctx, text, maxWidth);
+      const totalTextH = lines.length * lineH;
+      const refFontSize = 17 * S;
+      const refH = ref ? refFontSize * 1.4 + 12 * S : 0;
+      const contentTop = 72 * S;
+      const contentBottom = H - 83 * S;
+      const contentH = contentBottom - contentTop;
+
+      let startY;
+      if (currentMode === 'scripture') {
+        startY = contentTop + (contentH - totalTextH - refH) / 2;
+      } else {
+        startY = contentTop + 10 * S;
+      }
+
+      lines.forEach((line, i) => {
+        ctx.fillText(line, marginX, startY + i * lineH);
+      });
+
+      if (ref) {
+        ctx.font = `700 ${refFontSize}px Montserrat, sans-serif`;
+        ctx.fillText(ref, marginX, startY + lines.length * lineH + 12 * S);
+      }
+
+      // Bottom separator
+      ctx.strokeStyle = '#1c1c1c';
+      ctx.lineWidth = 1 * S;
+      ctx.beginPath();
+      ctx.moveTo(0, H - 83 * S);
+      ctx.lineTo(W, H - 83 * S);
+      ctx.stroke();
+
+      // Export
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'devotional-' + Date.now() + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btn.textContent = '↓ Save Image';
+        btn.disabled = false;
+      }, 'image/png');
+    });
+  }
+
+  window.onload = () => {
+    document.getElementById('mainText').value = '"BUT YOU, O LORD, ARE A SHIELD ABOUT ME, MY GLORY, AND THE LIFTER OF MY HEAD. I CRIED ALOUD TO THE LORD, AND HE ANSWERED ME FROM HIS HOLY HILL. SELAH"';
+    document.getElementById('refText').value = 'PSALM 3:3-4 ESV';
+    renderNote();
+  };
+</script>
+</body>
+</html>
