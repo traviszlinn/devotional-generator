@@ -51,28 +51,31 @@
   textarea::placeholder { color: #333; }
   textarea:focus { outline: none; border-color: #444; }
   .ref-input { min-height: unset !important; height: 44px; resize: none; }
-  button.generate {
-    width: 100%; padding: 13px; background: #fff; color: #000; border: none;
-    border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 11px;
+  .btn-row { display: flex; gap: 8px; }
+  button.generate, button.save {
+    flex: 1; padding: 13px; border: none; border-radius: 8px;
+    font-family: 'Montserrat', sans-serif; font-size: 11px;
     font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
     cursor: pointer; transition: opacity 0.15s;
   }
-  button.generate:hover { opacity: 0.85; }
+  button.generate { background: #fff; color: #000; }
+  button.save { background: #222; color: #fff; border: 1px solid #444; }
+  button.generate:hover, button.save:hover { opacity: 0.85; }
+  button.save:disabled { opacity: 0.3; cursor: default; }
   .preview-outer {
     width: 100%; max-width: 390px;
     display: flex; flex-direction: column; align-items: center; gap: 12px;
   }
-  /* The canvas IS the preview */
   #noteCanvas {
     width: 390px;
     height: 844px;
     display: block;
   }
   .hint {
-    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #444; text-align: center;
+    line-height: 1.8;
   }
-  #renderCanvas { display: none; }
 </style>
 </head>
 <body>
@@ -86,21 +89,24 @@
   </div>
   <textarea id="mainText" placeholder="ENTER TEXT HERE..." rows="6"></textarea>
   <textarea id="refText" class="ref-input" placeholder="PSALM 3:3-4 ESV" rows="1"></textarea>
-  <button class="generate" onclick="drawAll()">Generate</button>
+  <div class="btn-row">
+    <button class="generate" onclick="drawAll()">Generate</button>
+    <button class="save" id="saveBtn" onclick="saveImage()" disabled>Save Image</button>
+  </div>
 </div>
 
 <div class="preview-outer">
-  <!-- Preview canvas (scaled down for display) -->
   <canvas id="noteCanvas" width="1170" height="2532"></canvas>
-  <p class="hint" id="hint" style="display:none;">iPhone: hold down image → Save to Photos &nbsp;|&nbsp; Desktop: right-click → Save</p>
+  <p class="hint" id="hint" style="display:none;">
+    Tap <strong>Save Image</strong> → image opens in new tab<br>
+    Long-press image → Add to Photos
+  </p>
 </div>
-
-<!-- Hidden high-res canvas not needed - we draw directly to the display canvas at full res and CSS scales it -->
 
 <script>
   let currentMode = 'scripture';
+  let imageReady = false;
 
-  // Full resolution: 390*3 x 844*3
   const CW = 1170;
   const CH = 2532;
   const S = 3;
@@ -150,41 +156,34 @@
       const canvas = document.getElementById('noteCanvas');
       const ctx = canvas.getContext('2d');
 
-      // ── BACKGROUND ──
-      ctx.fillStyle = '#000000';
+      // Background
+      ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, CW, CH);
 
-      // ── NAV BAR ──
-      // Back chevron
+      // ── NAV ──
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2.2 * S;
+      ctx.lineWidth = 2.2*S;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(30*S, 40*S);
-      ctx.lineTo(22*S, 48*S);
-      ctx.lineTo(30*S, 56*S);
+      ctx.moveTo(30*S, 40*S); ctx.lineTo(22*S, 48*S); ctx.lineTo(30*S, 56*S);
       ctx.stroke();
 
-      // "Notes"
       ctx.fillStyle = '#fff';
       ctx.font = `700 ${17*S}px Montserrat, sans-serif`;
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'left';
       ctx.fillText('Notes', 37*S, 48*S);
 
-      // Plus-rect icon
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.6 * S;
+      ctx.lineWidth = 1.6*S;
       const rx=330*S, ry=38*S, rs=20*S;
-      rrect(ctx, rx, ry, rs, rs, 2*S);
-      ctx.stroke();
+      rrect(ctx, rx, ry, rs, rs, 2*S); ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(rx+rs/2, ry+4*S); ctx.lineTo(rx+rs/2, ry+rs-4*S);
       ctx.moveTo(rx+4*S, ry+rs/2); ctx.lineTo(rx+rs-4*S, ry+rs/2);
       ctx.stroke();
 
-      // Three dots
       ctx.fillStyle = '#fff';
       [-8,0,8].forEach(o => {
         ctx.beginPath();
@@ -192,13 +191,13 @@
         ctx.fill();
       });
 
-      // ── MAIN CONTENT ──
+      // ── CONTENT ──
       const upper = text.toUpperCase();
       const upperRef = ref ? ref.toUpperCase() : '';
       const mx = 52*S;
       const mw = CW - mx*2;
       const ctop = 80*S;
-      const cbot = CH - 83*S; // leave space for bottom bar
+      const cbot = CH - 83*S;
       const ch = cbot - ctop;
 
       const fsz = currentMode === 'scripture' ? 25*S : 19*S;
@@ -228,17 +227,11 @@
 
       // ── BOTTOM BAR ──
       const by = CH - 83*S;
-
-      // Separator line
       ctx.strokeStyle = '#1c1c1c';
       ctx.lineWidth = 1*S;
       ctx.beginPath();
       ctx.moveTo(0, by); ctx.lineTo(CW, by);
       ctx.stroke();
-
-      // Icon positions spread across width
-      const iconY = by + 14*S;
-      const iconPositions = [48*S, 145*S, 245*S, 342*S];
 
       ctx.strokeStyle = '#fff';
       ctx.fillStyle = '#fff';
@@ -246,8 +239,11 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      // Icon 1: List/checklist
-      const [i1x, i1y] = [iconPositions[0]-12*S, iconY];
+      const iconY = by + 14*S;
+      const ip = [48*S, 145*S, 245*S, 342*S];
+
+      // Icon 1: Checklist
+      const [i1x, i1y] = [ip[0]-12*S, iconY];
       rrect(ctx, i1x, i1y, 5*S, 5*S, 1*S); ctx.stroke();
       rrect(ctx, i1x, i1y+7.5*S, 5*S, 5*S, 1*S); ctx.stroke();
       rrect(ctx, i1x, i1y+15*S, 5*S, 4*S, 1*S); ctx.stroke();
@@ -258,23 +254,23 @@
       ctx.stroke();
 
       // Icon 2: Camera
-      const [i2x, i2y] = [iconPositions[1]-12*S, iconY];
+      const [i2x, i2y] = [ip[1]-12*S, iconY];
       rrect(ctx, i2x, i2y+4*S, 24*S, 15*S, 2.5*S); ctx.stroke();
       ctx.beginPath();
       ctx.arc(i2x+12*S, i2y+11.5*S, 4*S, 0, Math.PI*2); ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(i2x+8*S, i2y+4*S);
-      ctx.lineTo(i2x+8*S, i2y+2.5*S);
+      ctx.moveTo(i2x+8*S,    i2y+4*S);
+      ctx.lineTo(i2x+8*S,    i2y+2.5*S);
       ctx.quadraticCurveTo(i2x+8*S, i2y+1*S, i2x+9.5*S, i2y+1*S);
       ctx.lineTo(i2x+14.5*S, i2y+1*S);
       ctx.quadraticCurveTo(i2x+16*S, i2y+1*S, i2x+16*S, i2y+2.5*S);
-      ctx.lineTo(i2x+16*S, i2y+4*S);
+      ctx.lineTo(i2x+16*S,   i2y+4*S);
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(i2x+19.5*S, i2y+7.5*S, 1.2*S, 0, Math.PI*2); ctx.fill();
 
       // Icon 3: Pencil
-      const [i3x, i3y] = [iconPositions[2]-10*S, iconY];
+      const [i3x, i3y] = [ip[2]-10*S, iconY];
       ctx.beginPath();
       ctx.moveTo(i3x+13*S, i3y+2*S);
       ctx.lineTo(i3x+18*S, i3y+7*S);
@@ -286,8 +282,8 @@
       ctx.moveTo(i3x+10*S, i3y+5*S); ctx.lineTo(i3x+15*S, i3y+10*S);
       ctx.stroke();
 
-      // Icon 4: New note (pencil + line)
-      const [i4x, i4y] = [iconPositions[3]-10*S, iconY];
+      // Icon 4: New note
+      const [i4x, i4y] = [ip[3]-10*S, iconY];
       ctx.beginPath();
       ctx.moveTo(i4x+3*S,  i4y+17*S);
       ctx.lineTo(i4x+3*S,  i4y+13*S);
@@ -302,8 +298,33 @@
       ctx.moveTo(i4x+1*S, i4y+19*S); ctx.lineTo(i4x+19*S, i4y+19*S);
       ctx.stroke();
 
+      // Enable save button
+      document.getElementById('saveBtn').disabled = false;
       document.getElementById('hint').style.display = 'block';
+      imageReady = true;
     });
+  }
+
+  function saveImage() {
+    if (!imageReady) return;
+    const canvas = document.getElementById('noteCanvas');
+    const url = canvas.toDataURL('image/png');
+    const win = window.open();
+    win.document.write(`
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width">
+          <style>
+            * { margin:0; padding:0; background:#000; }
+            img { width:100%; display:block; }
+          </style>
+        </head>
+        <body>
+          <img src="${url}">
+        </body>
+      </html>
+    `);
+    win.document.close();
   }
 
   window.onload = () => {
